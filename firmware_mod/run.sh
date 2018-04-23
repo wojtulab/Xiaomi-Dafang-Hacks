@@ -9,6 +9,10 @@ echo "Starting up CFW"
 ## Update the hostname:
 hostname -F $CONFIGPATH/hostname.conf
 
+## Update the time
+ntp_srv="$(cat "$CONFIGPATH/ntp_srv.conf")"
+/system/sdcard/bin/busybox ntpd -q -n -p "$ntp_srv"
+
 ## Get real Mac address from config file:
 MAC=$(grep MAC < /params/config/.product_config | cut -c16-27 | sed 's/\(..\)/\1:/g;s/:$//')
 
@@ -16,10 +20,6 @@ MAC=$(grep MAC < /params/config/.product_config | cut -c16-27 | sed 's/\(..\)/\1
 insmod /driver/8189es.ko rtw_initmac="$MAC"
 wpa_supplicant -B -i wlan0 -c $CONFIGPATH/wpa_supplicant.conf -P /var/run/wpa_supplicant.pid
 udhcpc -i wlan0 -p /var/run/udhcpc.pid -b -x hostname:"$(hostname)"
-
-## Sync the via NTP
-ntp_srv="$(cat "$CONFIGPATH/ntp_srv.conf")"
-/system/sdcard/bin/busybox ntpd -q -n -p "$ntp_srv"
 
 ## Load audio driver module:
 insmod /system/sdcard/driver/audio.ko
@@ -69,5 +69,8 @@ fi
 for i in /system/sdcard/config/autostart/*; do
   $i
 done
+
+##time corrections 
+until ping -c1 www.google.com &>/dev/null; do sleep 5; done /system/sdcard/bin/busybox ntpd -q -n -p "$ntp_srv"
 
 echo "Startup finished!"
